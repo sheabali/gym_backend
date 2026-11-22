@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\.66392fa83c12c2a20372edf9bd4d18d51870bde9-audit.json",
+    "files": [
+        {
+            "date": 1787136996162,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\error-2026-08-19.log",
+            "hash": "fb3f8047da035fec1a6c5b62893abfcc17b7a21b94edbc3e7cf760f824bfd33b"
+        },
+        {
+            "date": 1787226877637,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\error-2026-08-20.log",
+            "hash": "706c8011dfc1ff8c65b943bf2efafbe5c60241ae532781778bf37a87fa8412e6"
+        }
+    ],
+    "hashType": "sha256"
+}

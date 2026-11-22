@@ -1,0 +1,3 @@
+{"level":"info","message":"Request processed - NORMAL: 461.73ms - POST /api/v1/auth/login","method":"POST","responseTime":"461.73ms","service":"default-service-name","statusCode":401,"timeCategory":"NORMAL","timestamp":"2026-05-04 20:48:14","url":"/api/v1/auth/login"}
+{"level":"info","message":"Request processed - VERY_SLOW: 1270.47ms - POST /api/v1/auth/login","method":"POST","responseTime":"1270.47ms","service":"default-service-name","statusCode":200,"timeCategory":"VERY_SLOW","timestamp":"2026-05-04 20:48:54","url":"/api/v1/auth/login"}
+{"alert":"SLOW_RESPONSE","level":"warn","message":"Performance concern: POST /api/v1/auth/login","responseTime":"1270.47ms","service":"default-service-name","statusCode":200,"timestamp":"2026-05-04 20:48:54"}

@@ -1,0 +1,35 @@
+{
+    "keep": {
+        "days": false,
+        "amount": 15
+    },
+    "auditLog": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\.35191e34a8c2b10945a0b14c5363e5f243389ad6-audit.json",
+    "files": [
+        {
+            "date": 1787136996159,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\info-2026-08-19-10-56.log",
+            "hash": "72bd2e6fa94052ad26395717168710dd4eb3cbdcb85f049280a6d09ebfabe137"
+        },
+        {
+            "date": 1787137044506,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\info-2026-08-19-10-57.log",
+            "hash": "1ce04b7d3f00d75adb37b0f5d69c92792a1a3b55f0d5e12eb8ad3372e75c90b9"
+        },
+        {
+            "date": 1787137085256,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\info-2026-08-19-10-58.log",
+            "hash": "564c6980628cf6020c3481ef287692f254a646e491267e7244f345562713cbd9"
+        },
+        {
+            "date": 1787137203477,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\info-2026-08-19-11-00.log",
+            "hash": "23591da4efd16f92b52e978f935087c7192d7c3189ddf3871bc6a8594cfd598b"
+        },
+        {
+            "date": 1787226877635,
+            "name": "C:\\Users\\Sheib Ali\\Project\\system\\backend-sd\\logs\\info-2026-08-20-11-54.log",
+            "hash": "446616095ef039e536da8c0db0560b66f4c795943a7415378603d3716d48ce7f"
+        }
+    ],
+    "hashType": "sha256"
+}

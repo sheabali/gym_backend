@@ -1,0 +1,270 @@
+// Gym Management System - v1 schema (MongoDB + Prisma)
+// Conventions:
+//  - All money is stored as integers in paisa (1 BDT = 100 paisa). Never floats.
+//  - All timestamps are UTC. Display in Asia/Dhaka on the frontend.
+//  - MongoDB has no real foreign keys: Prisma emulates relations, so
+//    integrity rules (e.g. "no booking without an active subscription")
+//    are enforced in the API layer, and uniqueness by indexes below.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL") // must be a replica set (Atlas default) for transactions
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  MEMBER
+  TRAINER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum SubscriptionStatus {
+  PENDING // created, awaiting payment
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ALL_LEVELS
+}
+
+enum SessionStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+enum ContactStatus {
+  NEW
+  REPLIED
+  CLOSED
+}
+
+// ---------- Embedded types (MongoDB-native, no separate collection) ----------
+
+type EmergencyContact {
+  name     String
+  phone    String
+  relation String?
+}
+
+// ---------- Users ----------
+
+model User {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  email           String            @unique
+  phone           String            @unique
+  passwordHash    String
+  role            Role              @default(MEMBER)
+  status          UserStatus        @default(ACTIVE)
+  photoUrl        String?
+  emailVerifiedAt DateTime?
+  emergencyContact EmergencyContact?
+  trialUsed       Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  trainerProfile  TrainerProfile?
+  subscriptions   Subscription[]
+  payments        Payment[]
+  bookings        Booking[]
+  sessionsTaught  ClassSession[]    @relation("TrainerSessions")
+
+  @@index([role, status])
+}
+
+model TrainerProfile {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @unique @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id])
+  bio            String?
+  specialties    String[]
+  certifications String[]
+  photoUrl       String?
+  isPublic       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+}
+
+// ---------- Memberships and payments ----------
+
+model MembershipPlan {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  slug         String         @unique
+  description  String?
+  price        Int // paisa
+  durationDays Int
+  features     String[]
+  isActive     Boolean        @default(true)
+  isFeatured   Boolean        @default(false)
+  sortOrder    Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id        String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String             @db.ObjectId
+  user      User               @relation(fields: [userId], references: [id])
+  planId    String             @db.ObjectId
+  plan      MembershipPlan     @relation(fields: [planId], references: [id])
+
+  // Snapshots: later plan edits must never change past purchases
+  planName  String
+  pricePaid Int // paisa
+
+  status    SubscriptionStatus @default(PENDING)
+  startDate DateTime? // set on activation
+  endDate   DateTime? // set on activation
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  payments  Payment[]
+
+  @@index([userId, status])
+  @@index([status, endDate]) // for the expiry job
+}
+
+model Payment {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  subscriptionId String        @db.ObjectId
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+  userId         String        @db.ObjectId
+  user           User          @relation(fields: [userId], references: [id])
+
+  tranId         String        @unique // our own transaction id sent to SSLCommerz; unique = no double credit
+  amount         Int // paisa
+  currency       String        @default("BDT")
+  status         PaymentStatus @default(PENDING)
+  method         String? // card / bKash / etc., as reported by the gateway
+  valId          String? // gateway validation id
+  bankTranId     String?
+  gatewayResponse Json? // raw gateway payload, kept for audits and disputes
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+// ---------- Classes and bookings ----------
+
+model ClassType {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  slug            String         @unique
+  description     String?
+  imageUrl        String?
+  difficulty      Difficulty     @default(ALL_LEVELS)
+  durationMinutes Int
+  isActive        Boolean        @default(true)
+
+  sessions        ClassSession[]
+}
+
+model ClassSession {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  classTypeId String        @db.ObjectId
+  classType   ClassType     @relation(fields: [classTypeId], references: [id])
+  trainerId   String        @db.ObjectId
+  trainer     User          @relation("TrainerSessions", fields: [trainerId], references: [id])
+
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  bookedCount Int           @default(0) // updated atomically at booking time
+  room        String?
+  status      SessionStatus @default(SCHEDULED)
+
+  bookings    Booking[]
+
+  @@index([startsAt])
+  @@index([trainerId, startsAt])
+}
+
+model Booking {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId   String        @db.ObjectId
+  session     ClassSession  @relation(fields: [sessionId], references: [id])
+  userId      String        @db.ObjectId
+  user        User          @relation(fields: [userId], references: [id])
+
+  status      BookingStatus @default(BOOKED)
+  bookedAt    DateTime      @default(now())
+  cancelledAt DateTime?
+
+  // One row per member per session. Re-booking after a cancellation
+  // reuses this row (status back to BOOKED) instead of inserting a new one.
+  @@unique([sessionId, userId])
+  @@index([userId, status])
+}
+
+// ---------- Contact and website content ----------
+
+model ContactMessage {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  phone     String?
+  email     String?
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+}
+
+model FaqItem {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  question    String
+  answer      String
+  sortOrder   Int     @default(0)
+  isPublished Boolean @default(true)
+}
+
+model GalleryImage {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  url       String
+  caption   String?
+  category  String?
+  sortOrder Int     @default(0)
+}
+
+model Announcement {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  body        String
+  isActive    Boolean   @default(true)
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+}
