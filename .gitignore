@@ -4,12 +4,9 @@ dist
 .vercel
 config.bat
 
-.env
 
 
 # Environment variables
-.env
-.env.*
 !.env.example
 
 # Dependencies
