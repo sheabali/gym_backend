@@ -19,6 +19,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters').default('super-secret-jwt-key-replace-in-production-12345'),
   JWT_EXPIRES_IN: z.string().default('15m'),
   REFRESH_TOKEN_EXPIRES_DAYS: z.coerce.number().default(30),
+  COOKIE_DOMAIN: z.string().optional(),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // Application URLs
   BACKEND_URL: z.string().default('http://localhost:8000'),

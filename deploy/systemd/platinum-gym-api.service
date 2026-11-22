@@ -1,0 +1,36 @@
+# ==============================================================================
+# Systemd Service Unit for Platinum Gym API
+# Place in: /etc/systemd/system/platinum-gym-api.service
+# Enable: sudo systemctl daemon-reload && sudo systemctl enable --now platinum-gym-api
+# ==============================================================================
+
+[Unit]
+Description=Platinum Gym Management System API (Node.js/Express)
+After=network.target mongod.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/var/www/platinum_gym_backend
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=platinum-gym-api
+
+# Environment variables
+Environment=NODE_ENV=production
+Environment=PORT=8000
+
+# Security Sandboxing
+CapabilityBoundingSet=
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

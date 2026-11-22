@@ -13,13 +13,21 @@ import {
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
-const getRefreshCookieOptions = (): CookieOptions => ({
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: (env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-  maxAge: env.REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
-  path: '/api/v1/auth',
-});
+const getRefreshCookieOptions = (): CookieOptions => {
+  const options: CookieOptions = {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: env.COOKIE_SAME_SITE,
+    maxAge: env.REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
+    path: '/api/v1/auth',
+  };
+
+  if (env.COOKIE_DOMAIN) {
+    options.domain = env.COOKIE_DOMAIN;
+  }
+
+  return options;
+};
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await registerUser(req.body);

@@ -1,4 +1,4 @@
-import { PrismaClient, Role, UserStatus } from '@prisma/client';
+import { PrismaClient, Role, UserStatus, Difficulty } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -132,6 +132,50 @@ async function main() {
       console.log(`✅ Membership plan created: ${plan.name} (${plan.price / 100} BDT)`);
     } else {
       console.log(`ℹ️ Membership plan already exists: ${existingPlan.name}`);
+    }
+  }
+
+  console.log('Seeding initial class types...');
+
+  const defaultClasses = [
+    {
+      name: 'HIIT & Functional Circuit',
+      slug: 'hiit-functional-circuit',
+      description: 'High-intensity interval training focusing on calorie burn, cardiovascular endurance, and athletic power.',
+      difficulty: Difficulty.ALL_LEVELS,
+      durationMinutes: 45,
+      isActive: true,
+    },
+    {
+      name: 'Strength & Conditioning',
+      slug: 'strength-conditioning',
+      description: 'Compound barbell and dumbbell lifts structured for hypertrophy, bone density, and functional core strength.',
+      difficulty: Difficulty.INTERMEDIATE,
+      durationMinutes: 60,
+      isActive: true,
+    },
+    {
+      name: 'Power Yoga & Flexibility',
+      slug: 'power-yoga-flexibility',
+      description: 'Vinyasa flow, deep mobility, recovery breathwork, and joint stability designed for gym athletes.',
+      difficulty: Difficulty.BEGINNER,
+      durationMinutes: 50,
+      isActive: true,
+    },
+  ];
+
+  for (const classData of defaultClasses) {
+    const existingClass = await prisma.classType.findUnique({
+      where: { slug: classData.slug },
+    });
+
+    if (!existingClass) {
+      const createdClass = await prisma.classType.create({
+        data: classData,
+      });
+      console.log(`✅ Class type created: ${createdClass.name}`);
+    } else {
+      console.log(`ℹ️ Class type already exists: ${existingClass.name}`);
     }
   }
 }
