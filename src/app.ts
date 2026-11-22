@@ -1,138 +1,67 @@
-import cors from "cors";
-import express, { Application, NextFunction, Request, Response } from "express";
-import responseTime from "response-time";
-import router from "./app/routes";
-import logger from "./utils/logger/logger";
+import express, { Express } from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { env } from './config';
+import { requestLogger } from './middleware/requestLogger';
+import { globalRateLimiter } from './middleware/rateLimiter';
+import { notFoundHandler } from './middleware/notFoundHandler';
+import { errorHandler } from './middleware/errorHandler';
+import { apiRouter } from './routes';
+import { docsRouter } from './docs/docs.routes';
 
-// Initialize app
-const app: Application = express();
+export const createApp = (): Express => {
+  const app = express();
 
-// Cors OPTIONS
-const corsOptions = {
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "x-client-type",
-    "Accept",
-    "Origin",
-  ],
-  credentials: true,
-  exposedHeaders: [
-    "Content-Range",
-    "Content-Length",
-    "Accept-Ranges",
-    "Connection",
-    "Upgrade",
-  ],
+  // Security headers
+  app.use(helmet());
+
+  // CORS configuration
+  const allowedOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps or curl)
+        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    })
+  );
+
+  // Request logger with correlation ID
+  app.use(requestLogger);
+
+  // Global rate limiter
+  app.use(globalRateLimiter);
+
+  // Cookie parser for refresh token cookies
+  app.use(cookieParser());
+
+  // Body parsers with size limit
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+  // API Documentation (OpenAPI 3.0 & Swagger UI)
+  app.use('/api-docs', docsRouter);
+  app.use('/api/v1/docs', docsRouter);
+
+  // API Routes
+  app.use('/api/v1', apiRouter);
+
+  // 404 Handler
+  app.use(notFoundHandler);
+
+  // Central Error Handler
+  app.use(errorHandler);
+
+  return app;
 };
 
-// Middlewares
-app.use(cors(corsOptions));
-
-// Stripe webhook (uncomment once Payment module is created)
-// import { PaymentController } from "./app/modules/Payment/payment.controller";
-// app.post(
-//   "/api/v1/payment/webhook",
-//   express.raw({ type: "application/json" }),
-//   PaymentController.handleWebhook
-// );
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
-
-// Endpoints ( root )
-app.get("/", (req: Request, res: Response) => {
-  res.send({
-    message: "API Server is running..",
-  });
-});
-
-// Log incoming requests
-app.use(
-  responseTime((req: Request, res: Response, time: number) => {
-    const timeInMs = time.toFixed(2);
-    const timeCategory =
-      time < 100
-        ? "VERY FAST"
-        : time < 200
-          ? "FAST"
-          : time < 500
-            ? "NORMAL"
-            : time < 1000
-              ? "SLOW"
-              : time < 5000
-                ? "VERY_SLOW"
-                : "CRITICAL";
-
-    // Skip logging for streaming requests to reduce noise
-    if (!req.path.includes("/stream/")) {
-      logger.info({
-        message: `Request processed - ${timeCategory}: ${timeInMs}ms - ${req.method} ${req.originalUrl}`,
-        method: req.method,
-        url: req.originalUrl,
-        responseTime: `${timeInMs}ms`,
-        timeCategory,
-        statusCode: res.statusCode,
-        // userAgent: req.get("User-Agent"),
-        // ip: req.ip,
-      });
-    }
-
-    // Alert for performance issues
-    if (time > 1000) {
-      logger.warn({
-        message: `Performance concern: ${req.method} ${req.originalUrl}`,
-        responseTime: `${timeInMs}ms`,
-        statusCode: res.statusCode,
-        alert: "SLOW_RESPONSE",
-      });
-    }
-  })
-);
-
-// Routes
-app.use("/api/v1", router);
-
-// Health check endpoint
-app.get("/api/v1/health", async (req: Request, res: Response) => {
-  try {
-    res.status(200).json({
-      success: true,
-      message: "Server is healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      },
-    });
-  } catch (error) {
-    res.status(503).json({
-      success: false,
-      message: "Server health check failed",
-      error: "Database connection failed",
-    });
-  }
-});
-
-import GlobalErrorHandler from "./app/middlewares/globalErrorHandler";
-
-// 404 Not Found handler
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.status(404).json({
-    success: false,
-    message: "API NOT FOUND!",
-    error: {
-      path: req.originalUrl,
-      message: "Your requested path is not found!",
-    },
-  });
-});
-
-// Global Error Handler
-app.use(GlobalErrorHandler);
-
+export const app = createApp();
 export default app;

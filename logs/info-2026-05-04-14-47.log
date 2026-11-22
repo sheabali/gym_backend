@@ -1,2 +1,0 @@
-{"level":"info","message":"Request processed - VERY FAST: 49.24ms - POST /api/v1/auth/login","method":"POST","responseTime":"49.24ms","service":"default-service-name","statusCode":404,"timeCategory":"VERY FAST","timestamp":"2026-05-04 20:47:04","url":"/api/v1/auth/login"}
-{"level":"info","message":"Request processed - VERY FAST: 79.63ms - POST /api/v1/auth/login","method":"POST","responseTime":"79.63ms","service":"default-service-name","statusCode":404,"timeCategory":"VERY FAST","timestamp":"2026-05-04 20:47:39","url":"/api/v1/auth/login"}

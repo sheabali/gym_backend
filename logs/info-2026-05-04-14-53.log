@@ -1,2 +1,0 @@
-{"level":"info","message":"Request processed - FAST: 115.03ms - POST /api/v1/resume/upload","method":"POST","responseTime":"115.03ms","service":"default-service-name","statusCode":429,"timeCategory":"FAST","timestamp":"2026-05-04 20:53:39","url":"/api/v1/resume/upload"}
-{"level":"info","message":"Request processed - VERY FAST: 56.02ms - GET /api/v1/dashboard/stats","method":"GET","responseTime":"56.02ms","service":"default-service-name","statusCode":304,"timeCategory":"VERY FAST","timestamp":"2026-05-04 20:53:39","url":"/api/v1/dashboard/stats"}

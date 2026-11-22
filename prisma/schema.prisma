@@ -100,6 +100,8 @@ model User {
   payments        Payment[]
   bookings        Booking[]
   sessionsTaught  ClassSession[]    @relation("TrainerSessions")
+  refreshTokens   RefreshToken[]
+  authTokens      AuthToken[]
 
   @@index([role, status])
 }
@@ -267,4 +269,38 @@ model Announcement {
   isActive    Boolean   @default(true)
   publishedAt DateTime  @default(now())
   expiresAt   DateTime?
+}
+
+// ---------- Authentication Tokens ----------
+
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model RefreshToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  family    String
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([family])
+}
+
+model AuthToken {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String        @db.ObjectId
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String        @unique
+  type      AuthTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, type])
 }
